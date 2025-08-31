@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  />
+  <title>ESP Web Flasher</title>
+  <style>
+    /* Color system (5 total):
+       - Primary: Blue (#2563eb)
+       - Neutrals: Background #0b1220, Card #0f172a, Text #ffffff
+       - Accent: Amber (#f59e0b)
+    */
+
+    :root{
+      --bg: #0b1220;
+      --card: #0f172a;
+      --text: #ffffff;
+      --muted: rgba(255,255,255,0.7);
+      --border: rgba(255,255,255,0.08);
+      --primary: #2563eb;
+      --primary-600: #1d4ed8;
+      --primary-700: #1e40af;
+      --accent: #f59e0b;
+      --shadow: 0 10px 30px rgba(0,0,0,0.35), 0 4px 10px rgba(0,0,0,0.25);
+      --radius-lg: 16px;
+      --radius-md: 10px;
+      --radius-sm: 8px;
+      --focus: 0 0 0 3px rgba(37, 99, 235, 0.4);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body{
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      background: var(--bg);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    /* Page container */
+    .shell{
+      width: 100%;
+      max-width: 720px;
+      display: grid;
+      gap: 16px;
+      justify-items: center;
+    }
+
+    /* Header */
+    .brand{
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 14px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .card{
+      position: relative;
+      width: 100%;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      transform: translateZ(0);
+      animation: cardFloat 10s ease-in-out infinite;
+    }
+
+    /* Animated accent sweep (subtle) */
+    .card::before{
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -40%;
+      width: 40%;
+      height: 3px;
+      background: var(--accent);
+      opacity: .9;
+      border-bottom-right-radius: 3px;
+      border-top-right-radius: 3px;
+      animation: sweep 4s linear infinite;
+      will-change: transform;
+    }
+
+    @keyframes sweep{
+      0% { transform: translateX(0%); }
+      100% { transform: translateX(350%); }
+    }
+
+    @keyframes cardFloat{
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+
+    h1{
+      margin: 0 0 8px;
+      font-size: 22px;
+      line-height: 1.3;
+      letter-spacing: -0.02em;
+    }
+
+    p.lead{
+      margin: 0 0 20px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* Dropzone */
+    .dropzone{
+      position: relative;
+      display: grid;
+      gap: 10px;
+      align-items: center;
+      justify-items: center;
+      padding: 18px;
+      border: 2px dashed var(--primary);
+      border-radius: var(--radius-md);
+      background: rgba(37,99,235,0.06);
+      transition: background .2s ease, border-color .2s ease, transform .2s ease;
+      cursor: pointer;
+      outline: none;
+    }
+    .dropzone:hover{
+      background: rgba(37,99,235,0.09);
+      transform: translateY(-1px);
+    }
+    .dropzone:focus-visible{
+      box-shadow: var(--focus);
+    }
+    .dropzone.dragover{
+      background: rgba(37,99,235,0.12);
+      border-color: var(--primary-600);
+    }
+    .dropzone .dz-title{
+      font-weight: 600;
+      color: #e5e7eb;
+      text-align: center;
+    }
+    .dropzone .dz-help{
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+    }
+
+    input[type="file"]{
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      pointer-events: none;
+      width: 0;
+      height: 0;
+    }
+
+    /* Selected file pill */
+    .file-pill{
+      display: none;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(37,99,235,0.12);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 13px;
+      max-width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .file-pill.show{ display: inline-flex; }
+
+    /* Actions row */
+    .actions{
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+
+    .btn{
+      appearance: none;
+      border: none;
+      outline: none;
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      background: var(--primary);
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 14px;
+      letter-spacing: .01em;
+      cursor: pointer;
+      display: inline-grid;
+      grid-auto-flow: column;
+      gap: 10px;
+      align-items: center;
+      justify-content: center;
+      transition: background .15s ease, transform .15s ease, opacity .15s ease;
+    }
+    .btn:hover{ background: var(--primary-600); transform: translateY(-1px); }
+    .btn:active{ transform: translateY(0); background: var(--primary-700); }
+    .btn:focus-visible{ box-shadow: var(--focus); }
+    .btn[disabled]{ opacity: .6; cursor: not-allowed; transform: none; }
+
+    .spinner{
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,.35);
+      border-top-color: #fff;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin{ to{ transform: rotate(360deg); } }
+
+    /* Progress */
+    .progress-wrap{
+      width: 100%;
+      margin-top: 8px;
+    }
+    .progress{
+      height: 10px;
+      width: 100%;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .progress-bar{
+      height: 100%;
+      width: 0%;
+      background: var(--primary);
+      transition: width .15s ease;
+    }
+    .progress-meta{
+      margin-top: 6px;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* Status area */
+    .status{
+      margin-top: 12px;
+      font-size: 13px;
+      color: var(--muted);
+      min-height: 18px;
+    }
+
+    /* Footer note */
+    .note{
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+      margin-top: 8px;
+    }
+
+    /* Small helpers */
+    .icon{
+      width: 22px; height: 22px; display: inline-block;
+      color: var(--primary);
+      flex: 0 0 auto;
+    }
+    .visually-hidden{
+      position: absolute !important;
+      width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+    }
+
+    /* Layout tweaks */
+    @media (min-width: 640px){
+      .card{ padding: 28px; }
+      h1{ font-size: 24px; }
+      .btn{ padding: 12px 18px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell" aria-labelledby="page-title">
+    <div class="brand" aria-hidden="true">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 3l3.5 6h-7L12 3zm0 4l-7 12h14L12 7z" stroke="currentColor" stroke-width="1.5" />
+      </svg>
+      <span>Device OTA</span>
+    </div>
+
+    <section class="card" role="region" aria-label="Firmware Update Card">
+      <h1 id="page-title">Firmware Update</h1>
+      <p class="lead">Upload your firmware package and flash it to the device. Drag & drop a file or click the area below.</p>
+
+      <form id="update-form" method="POST" action="/update" enctype="multipart/form-data" novalidate>
+        <label id="dropzone" class="dropzone" role="button" tabindex="0" aria-describedby="dropzone-help" for="file-input">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 16V7m0 0l-3 3m3-3l3 3M6 17h12a2 2 0 0 0 0-4h-.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div class="dz-title">Drop your firmware here</div>
+          <div id="dropzone-help" class="dz-help">Accepted: .bin, .hex, .uf2, .zip • Max 50MB</div>
+        </label>
+        <input id="file-input" type="file" name="update" accept=".bin,.hex,.uf2,.zip" aria-label="Choose firmware file" />
+
+        <div id="file-pill" class="file-pill" aria-live="polite" aria-atomic="true">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M7 18h10a1 1 0 0 0 1-1V9.5L13.5 4H7a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1z" stroke="currentColor" stroke-width="1.5"/>
+          </svg>
+          <span id="file-name">No file selected</span>
+        </div>
+
+        <div class="actions">
+          <button id="submit-btn" class="btn" type="submit" aria-live="polite" aria-busy="false">
+            <span id="btn-spinner" class="spinner" style="display:none" aria-hidden="true"></span>
+            <span id="btn-text">Upload & Flash</span>
+          </button>
+
+          <div class="progress-wrap" style="display:none" aria-hidden="true">
+            <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Upload progress">
+              <div id="progress-bar" class="progress-bar"></div>
+            </div>
+            <div class="progress-meta">
+              <span id="progress-label">0%</span>
+              <span id="progress-tip">Preparing upload…</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="status" class="status" role="status" aria-live="polite" aria-atomic="true"></div>
+
+        <p class="note">Do not power off the device during flashing. This page will show progress and confirmation.</p>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    (function(){
+      const form = document.getElementById('update-form');
+      const fileInput = document.getElementById('file-input');
+      const dropzone = document.getElementById('dropzone');
+      const filePill = document.getElementById('file-pill');
+      const fileName = document.getElementById('file-name');
+
+      const submitBtn = document.getElementById('submit-btn');
+      const btnSpinner = document.getElementById('btn-spinner');
+      const btnText = document.getElementById('btn-text');
+
+      const progressWrap = document.querySelector('.progress-wrap');
+      const progressBar = document.getElementById('progress-bar');
+      const progressLabel = document.getElementById('progress-label');
+      const progressTip = document.getElementById('progress-tip');
+      const statusEl = document.getElementById('status');
+
+      // Helpers
+      function setStatus(msg, isError=false){
+        statusEl.textContent = msg || '';
+        statusEl.style.color = isError ? '#f59e0b' : 'var(--muted)'; // using accent as highlight
+      }
+      function setLoading(loading){
+        submitBtn.disabled = loading;
+        submitBtn.setAttribute('aria-busy', String(loading));
+        btnSpinner.style.display = loading ? 'inline-block' : 'none';
+        btnText.textContent = loading ? 'Uploading…' : 'Upload & Flash';
+      }
+      function showProgress(show){
+        progressWrap.style.display = show ? 'block' : 'none';
+        progressWrap.setAttribute('aria-hidden', show ? 'false' : 'true');
+      }
+      function updateProgress(percent){
+        const clamped = Math.min(100, Math.max(0, percent|0));
+        progressBar.style.width = clamped + '%';
+        progressLabel.textContent = clamped + '%';
+        document.querySelector('.progress').setAttribute('aria-valuenow', String(clamped));
+      }
+
+      // Dropzone interactions
+      ;['dragenter','dragover'].forEach(evt =>
+        dropzone.addEventListener(evt, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropzone.classList.add('dragover');
+        })
+      );
+      ;['dragleave','drop'].forEach(evt =>
+        dropzone.addEventListener(evt, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropzone.classList.remove('dragover');
+        })
+      );
+      dropzone.addEventListener('drop', (e) => {
+        const files = e.dataTransfer?.files;
+        if(files && files.length){
+          fileInput.files = files;
+          onFileSelected();
+        }
+      });
+      dropzone.addEventListener('keydown', (e) => {
+        if(e.key === 'Enter' || e.key === ' '){
+          e.preventDefault();
+          fileInput.click();
+        }
+      });
+
+      fileInput.addEventListener('change', onFileSelected);
+
+      function onFileSelected(){
+        const f = fileInput.files && fileInput.files[0];
+        if(!f){
+          filePill.classList.remove('show');
+          fileName.textContent = 'No file selected';
+          return;
+        }
+        filePill.classList.add('show');
+        fileName.textContent = f.name;
+        setStatus('');
+      }
+
+      // Handle submit with real upload progress via XHR
+      form.addEventListener('submit', function(e){
+        e.preventDefault();
+
+        const f = fileInput.files && fileInput.files[0];
+        if(!f){
+          setStatus('Please select a firmware file before uploading.', true);
+          fileInput.focus();
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append('update', f);
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', form.action || '/update');
+
+        // Reset UI
+        setStatus('Preparing upload…');
+        setLoading(true);
+        showProgress(true);
+        updateProgress(0);
+        progressTip.textContent = 'Starting…';
+
+        // Upload progress
+        xhr.upload.onprogress = function(evt){
+          if(evt.lengthComputable){
+            const percent = (evt.loaded / evt.total) * 100;
+            updateProgress(percent);
+            progressTip.textContent = percent < 100 ? 'Uploading…' : 'Processing…';
+          }else{
+            // Fallback when length is unknown (keep the bar animated to 60%)
+            updateProgress(60);
+            progressTip.textContent = 'Uploading…';
+          }
+        };
+
+        xhr.onreadystatechange = function(){
+          if(xhr.readyState === XMLHttpRequest.DONE){
+            setLoading(false);
+
+            if(xhr.status >= 200 && xhr.status < 300){
+              updateProgress(100);
+              progressTip.textContent = 'Completed';
+              setStatus('Upload complete. Flash initiated. You may see the device reboot shortly.');
+              btnText.textContent = 'Done';
+            }else{
+              setStatus('Upload failed. ' + (xhr.responseText || 'Please try again.'), true);
+              btnText.textContent = 'Retry Upload';
+              // Keep progress visible for context, but do not hide it
+            }
+          }
+        };
+
+        xhr.onerror = function(){
+          setLoading(false);
+          setStatus('Network error during upload. Please check your connection and try again.', true);
+        };
+
+        xhr.send(formData);
+      });
+    })();
+  </script>
+</body>
+</html>
