@@ -1,4 +1,4 @@
-# ESP Web Flasher
+#  🌐ESP Web Flasher
 
 A simple Over-The-Air (OTA) firmware updater and device control web interface for ESP8266, using only your browser.
 
@@ -12,7 +12,7 @@ A simple Over-The-Air (OTA) firmware updater and device control web interface fo
   Toggle the onboard LED from the web interface.
 - **Modern UI:**  
   Responsive, user-friendly interface with drag & drop support.
-    
+
 ## Hardware
 
 - ESP8266-based board (e.g., NodeMCU, Wemos D1 Mini, etc.)
@@ -63,6 +63,3 @@ A simple Over-The-Air (OTA) firmware updater and device control web interface fo
 - Inspired by [eshwargit2/ESP_WebFlasher](https://github.com/eshwargit2/ESP_WebFlasher)
 - UI design by [@eshwargit2](https://github.com/eshwargit2)
 
-## License
-
-MIT License
